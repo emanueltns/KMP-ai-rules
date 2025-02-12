@@ -1,0 +1,1 @@
+# KMP-ai-rules

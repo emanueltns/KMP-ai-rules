@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<property_type_rules>
+    <overview>
+        <description>This document outlines the rules and best practices for modifying property types in the MobileAssist-KMP codebase, especially when the properties are used across multiple files and components.</description>
+    </overview>
+
+    <property_usage_analysis>
+        <checklist>
+            <item>Run a codebase-wide search for all usages</item>
+            <item>Document all files and components that use this property</item>
+            <item>Identify all interfaces that expose this property</item>
+            <item>Check for serialization/deserialization usage</item>
+        </checklist>
+    </property_usage_analysis>
+
+    <type_modification_checklist>
+        <example language="kotlin">
+            <code>
+                data class Route(
+                    val travelTime: Duration,  // Used in multiple places
+                    val stops: List<Stop>
+                )
+            </code>
+        </example>
+        <verification_points>
+            <point>Is this property used in API responses?</point>
+            <point>Is this property used in database entities?</point>
+            <point>Is this property used in UI displays?</point>
+            <point>Are there any mappers using this property?</point>
+            <point>Is this property part of an interface contract?</point>
+        </verification_points>
+    </type_modification_checklist>
+
+    <safe_modification_strategy>
+        <example language="kotlin">
+            <code>
+                // CORRECT: Phased approach
+                // Phase 1: Add new property while keeping old
+                data class Route(
+                    @Deprecated("Use travelDuration instead")
+                    val travelTime: Int,
+                    val travelDuration: Duration
+                )
+                
+                // Phase 2: Migrate all usages
+                // Phase 3: Remove deprecated property
+            </code>
+        </example>
+    </safe_modification_strategy>
+
+    <breaking_change_prevention>
+        <guidelines>
+            <item>Create interface contracts for shared models</item>
+            <item>Use sealed interfaces for type-safe hierarchies</item>
+            <item>Document property types in interface comments</item>
+            <item>Add @JvmInline value classes for type safety</item>
+        </guidelines>
+    </breaking_change_prevention>
+
+    <testing_requirements>
+        <requirements>
+            <requirement>Unit tests for all property access patterns</requirement>
+            <requirement>Integration tests for data flow</requirement>
+            <requirement>Serialization/deserialization tests</requirement>
+            <requirement>Migration tests for database changes</requirement>
+        </requirements>
+    </testing_requirements>
+
+    <documentation_requirements>
+        <example language="kotlin">
+            <code>
+                /**
+                 * @property travelTime Duration of travel
+                 * @warning This property is used in:
+                 *          - DashboardRepository (display)
+                 *          - RouteGateway (API)
+                 *          - RouteEntity (Database)
+                 */
+            </code>
+        </example>
+    </documentation_requirements>
+
+    <anti_patterns>
+        <example language="kotlin">
+            <code>
+                // DON'T: Direct type changes without migration
+                val travelTime: Int  // -> Duration (breaks existing code)
+
+                // DON'T: Implicit type conversions
+                val time: Duration = someInt // Type mismatch
+
+                // DO: Explicit conversions with migration path
+                val travelTime: Duration = someInt.toDuration(DurationUnit.MINUTES)
+            </code>
+        </example>
+    </anti_patterns>
+
+    <review_process>
+        <checklist>
+            <item>All usages updated</item>
+            <item>Tests passing</item>
+            <item>Migration strategy documented</item>
+            <item>Breaking changes communicated</item>
+            <item>Rollback plan in place</item>
+        </checklist>
+    </review_process>
+
+    <best_practices>
+        <summary>
+            <practice>Always analyze property usage before modification</practice>
+            <practice>Use a phased approach for type changes</practice>
+            <practice>Keep comprehensive documentation</practice>
+            <practice>Ensure thorough testing coverage</practice>
+            <practice>Follow the review process checklist</practice>
+        </summary>
+    </best_practices>
+
+    <contributing>
+        <description>Feel free to suggest improvements to these rules by creating a pull request or discussing in the team channel.</description>
+    </contributing>
+</property_type_rules>

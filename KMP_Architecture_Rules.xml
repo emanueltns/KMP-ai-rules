@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kmp_architecture_rules>
+    <critical_rules>
+        <rule id="NO_CODE_MODIFICATION">
+            <description>Never modify existing code without explicit permission</description>
+            <severity>CRITICAL</severity>
+        </rule>
+        <rule id="FAIL_FAST">
+            <description>Immediately report and fix compile/runtime errors</description>
+            <severity>CRITICAL</severity>
+        </rule>
+        <rule id="ERROR_LOGGING">
+            <description>Maintain error registry for future prevention</description>
+            <severity>CRITICAL</severity>
+        </rule>
+        <rule id="INTERFACE_FIRST">
+            <description>Prefer interface declarations over implementations</description>
+            <severity>CRITICAL</severity>
+        </rule>
+        <rule id="USE_EXISTING_ARCHITECTURE">
+            <description>DO NOT use rules which do not apply to existing architecture</description>
+            <severity>CRITICAL</severity>
+        </rule>
+        <rule id="UPDATE_RULES">
+            <description>Document new patterns and rules when discovered</description>
+            <severity>CRITICAL</severity>
+        </rule>
+        <rule id="RULE_OUTPUT">
+            <description>State applied rules in output</description>
+            <severity>CRITICAL</severity>
+        </rule>
+    </critical_rules>
+
+    <architecture_patterns>
+        <pattern id="OFFLINE_FIRST">
+            <name>Offline-First Architecture Pattern</name>
+            <components>
+                <component id="OFFLINE_CONTROLLER">
+                    <description>Manages application online/offline state</description>
+                    <requirements>
+                        <requirement>Use StateFlow for network state</requirement>
+                        <requirement>Support offline operation simulation</requirement>
+                        <requirement>Implement priority-based sync</requirement>
+                    </requirements>
+                    <example><![CDATA[
+class OfflineController(
+    private val responseRuleSetter: ResponseRuleSetter
+): KoinComponent {
+    private val _isOnline = MutableStateFlow(true)
+    val isOnline: StateFlow<Boolean> = _isOnline
+}
+                    ]]></example>
+                </component>
+                <component id="SYNC_OPERATION">
+                    <description>Manages offline operation synchronization</description>
+                    <requirements>
+                        <requirement>Unique operation IDs</requirement>
+                        <requirement>Priority-based queuing</requirement>
+                        <requirement>Operation metadata storage</requirement>
+                    </requirements>
+                </component>
+            </components>
+            <quality_checks>
+                <check>Is state properly initialized?</check>
+                <check>Are state updates thread-safe?</check>
+                <check>Is operation storage reliable?</check>
+            </quality_checks>
+        </pattern>
+
+        <pattern id="GATEWAY">
+            <name>Gateway Implementation Pattern</name>
+            <components>
+                <component id="BASE_GATEWAY">
+                    <description>Base abstract gateway class</description>
+                    <requirements>
+                        <requirement>Implement IGateway interface</requirement>
+                        <requirement>Use Koin for dependency injection</requirement>
+                        <requirement>Support offline mode</requirement>
+                    </requirements>
+                    <example><![CDATA[
+abstract class BaseGateway(
+    val client: HttpClient,
+) : IGateway, KoinComponent {
+    val offlineController: OfflineController by inject()
+    val database: AppDatabase by inject()
+}
+                    ]]></example>
+                </component>
+                <component id="REQUEST_CONFIG">
+                    <description>Type-safe request configuration</description>
+                    <requirements>
+                        <requirement>Immutable data class</requirement>
+                        <requirement>Type-safe parameters</requirement>
+                        <requirement>Optional request body</requirement>
+                    </requirements>
+                </component>
+            </components>
+            <quality_checks>
+                <check>Are all parameters properly typed?</check>
+                <check>Is error handling comprehensive?</check>
+                <check>Is offline mode properly handled?</check>
+            </quality_checks>
+        </pattern>
+
+        <pattern id="OPERATION_TYPE">
+            <name>Operation Type Pattern</name>
+            <components>
+                <component id="BASE_OPERATION">
+                    <description>Base sealed class for operations</description>
+                    <requirements>
+                        <requirement>Serializable operations</requirement>
+                        <requirement>Common property interface</requirement>
+                        <requirement>Domain-specific subclasses</requirement>
+                    </requirements>
+                    <example><![CDATA[
+@Serializable
+sealed class OperationType {
+    interface OperationProperties {
+        val requestType: RequestType
+        val url: String
+        val body: String?
+    }
+}
+                    ]]></example>
+                </component>
+            </components>
+            <quality_checks>
+                <check>Is serialization properly implemented?</check>
+                <check>Are domain boundaries respected?</check>
+                <check>Is the hierarchy maintainable?</check>
+            </quality_checks>
+        </pattern>
+
+        <pattern id="DATABASE">
+            <name>Database Integration Pattern</name>
+            <components>
+                <component id="SQLDELIGHT_INTEGRATION">
+                    <description>Platform-specific database integration</description>
+                    <requirements>
+                        <requirement>Platform-specific drivers</requirement>
+                        <requirement>Type-safe queries</requirement>
+                        <requirement>Transaction support</requirement>
+                    </requirements>
+                    <example><![CDATA[
+expect class DatabaseDriverFactory() {
+    fun createDatabaseDriver(
+        schema: SqlSchema<QueryResult.AsyncValue<Unit>>
+    ): SqlDriver
+}
+                    ]]></example>
+                </component>
+                <component id="SCHEMA_DEFINITION">
+                    <description>Database schema definitions</description>
+                    <tables>
+                        <table name="OfflineAction">
+                            <column>id TEXT PRIMARY KEY</column>
+                            <column>operation_type TEXT</column>
+                            <column>timestamp INTEGER</column>
+                        </table>
+                        <table name="Session">
+                            <column>workerId TEXT PRIMARY KEY</column>
+                            <column>userSessionToken TEXT</column>
+                        </table>
+                    </tables>
+                </component>
+            </components>
+            <quality_checks>
+                <check>Are tables properly normalized?</check>
+                <check>Are indices optimized?</check>
+                <check>Is referential integrity maintained?</check>
+            </quality_checks>
+        </pattern>
+    </architecture_patterns>
+
+    <dependency_management>
+        <rule id="DI_KOIN">
+            <description>Use Koin for dependency injection</description>
+            <example><![CDATA[
+val networkModule = module {
+    single<NetworkService> { KtorNetworkService() }
+    single<NetworkServiceInterface> { get<NetworkService>() }
+}
+            ]]></example>
+        </rule>
+        <rule id="SINGLE_INSTANCE">
+            <description>Use single instance pattern for core services</description>
+        </rule>
+        <rule id="PLATFORM_SPECIFIC">
+            <description>Apply dependency inversion for platform-specific code</description>
+        </rule>
+    </dependency_management>
+
+    <hierarchy_rules>
+        <rule id="DEPENDENCY_DIRECTION">
+            <description>High-level modules must depend on abstractions</description>
+            <paths>
+                <path>commonMain -> platformInterfaces</path>
+                <path>platformSpecific <- platformImplementations</path>
+            </paths>
+        </rule>
+    </hierarchy_rules>
+
+    <quality_checks>
+        <category id="ARCHITECTURE">
+            <check>Does this introduce platform-specific code in commonMain?</check>
+            <check>Are implementation details properly abstracted?</check>
+            <check>Is dependency direction maintained?</check>
+        </category>
+        <category id="CODE_QUALITY">
+            <check>Are SOLID principles followed?</check>
+            <check>Are Kotlin coding conventions followed?</check>
+            <check>Are dependencies properly versioned?</check>
+        </category>
+        <category id="PERFORMANCE">
+            <check>Are there potential memory leaks?</check>
+            <check>Are concurrency patterns correct?</check>
+        </category>
+    </quality_checks>
+
+    <testing_requirements>
+        <requirement id="MOCKABLE">
+            <description>All dependencies must be mockable</description>
+        </requirement>
+        <requirement id="TEST_IMPLEMENTATIONS">
+            <description>Provide test implementations in test directories</description>
+        </requirement>
+        <example><![CDATA[
+@Test
+fun `test gateway offline behavior`() {
+    // Given
+    offlineController.updateNetworkState(false)
+    
+    // When
+    val result = gateway.loadRoute(1L)
+    
+    // Then
+    verify(offlineController).performOperation(any())
+}
+        ]]></example>
+    </testing_requirements>
+</kmp_architecture_rules>

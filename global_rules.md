@@ -53,6 +53,12 @@ Check code against these criteria before output:
 6. Are dependencies properly version-managed?
 7. Are there any potential memory leaks?
 8. Are concurrency patterns correct?
+9. Are we using correct property accessors for each type?
+10. Have we checked API documentation for correct property names?
+11. Are we using type-specific conversion methods?
+12. Is there proper null handling in conversions?
+13. Are you using the correct type-specific properties?
+14. Did you analyze property usage before modification?
 </quality_checks>
 
 <key_enhancements_for_clean_architecture_in_KMM>
@@ -74,6 +80,57 @@ Check code against these criteria before output:
 - **Single Activity Direction:** Features can't directly access platform layer
 - **Test-Specific Rules:** Mock implementations only in `test/` source sets
 </additional_safeguards>
+
+<datetime_handling_rules>
+1. LocalDateTime Operations:
+   - ALWAYS use .date property when performing arithmetic operations
+   - NEVER perform direct minus/plus on LocalDateTime objects
+   - Use kotlinx.datetime functions instead of platform-specific implementations
+
+2. Duration Calculations:
+   - ALWAYS specify explicit DurationUnit
+   - Convert time differences to Duration using .toDuration()
+   - Handle null cases with Duration.ZERO as default
+
+3. Time Comparison Pattern:
+   ```kotlin
+   // CORRECT
+   val duration = endTime.date.minus(startTime.date).toMillis().toDuration(DurationUnit.MILLISECONDS)
+   
+   // INCORRECT
+   val duration = endTime.minus(startTime).toMillis()
+   
+4. Time Safety Checklist:
+		[ ] Are we accessing .date property for arithmetic?
+		[ ] Is DurationUnit explicitly specified?
+		[ ] Are null cases handled with safe defaults?
+		[ ] Are we using kotlinx.datetime extensions?
+		
+5. Common Patterns:
+    // Duration calculation pattern
+		val duration = when {
+    start != null && end != null ->
+        end.date.minus(start.date).toMillis().toDuration(DurationUnit.MILLISECONDS)
+    else -> Duration.ZERO
+		}
+
+		// Time accumulation pattern
+		var totalDuration = Duration.ZERO
+		items.forEach { item ->
+		    if (item.start != null && item.end != null) {
+		        totalDuration += item.end.date.minus(item.start.date)
+		            .toMillis()
+		            .toDuration(DurationUnit.MILLISECONDS)
+		    }
+		}
+
+6. Best Practices:
+		Use explicit type declarations for Duration properties
+		Prefer functional operations over imperative loops for time calculations
+		Always provide safe fallbacks for null time values
+		Use extension functions for common time operations 
+   
+</datetime_handling_rules>   
 
 <output_format>
 Generate implementations with:
@@ -120,4 +177,101 @@ class ErrorRepository {
     }
 }
 </examples>
+
+
+<property_type_rules>
+		<property_usage_analysis>
+        <checklist>
+            <item>Run a codebase-wide search for all usages</item>
+            <item>Document all files and components that use this property</item>
+            <item>Identify all interfaces that expose this property</item>
+            <item>Check for serialization/deserialization usage</item>
+        </checklist>
+    </property_usage_analysis>
+    
+    <type_modification_checklist>
+        <example language="kotlin">
+            <code>
+                data class Route(
+                    val travelTime: Duration,  // Used in multiple places
+                    val stops: List<Stop>
+                )
+            </code>
+        </example>
+        <verification_points>
+            <point>Is this property used in API responses?</point>
+            <point>Is this property used in database entities?</point>
+            <point>Is this property used in UI displays?</point>
+            <point>Are there any mappers using this property?</point>
+            <point>Is this property part of an interface contract?</point>
+        </verification_points>
+    </type_modification_checklist>
+    
+    <safe_modification_strategy>
+        <example language="kotlin">
+            <code>
+                // CORRECT: Phased approach
+                // Phase 1: Add new property while keeping old
+                data class Route(
+                    @Deprecated("Use travelDuration instead")
+                    val travelTime: Int,
+                    val travelDuration: Duration
+                )
+                
+                // Phase 2: Migrate all usages
+                // Phase 3: Remove deprecated property
+            </code>
+        </example>
+    </safe_modification_strategy>
+    
+    <breaking_change_prevention>
+        <guidelines>
+            <item>Create interface contracts for shared models</item>
+            <item>Use sealed interfaces for type-safe hierarchies</item>
+            <item>Document property types in interface comments</item>
+            <item>Add @JvmInline value classes for type safety</item>
+        </guidelines>
+    </breaking_change_prevention>
+
+    <testing_requirements>
+        <requirements>
+            <requirement>Unit tests for all property access patterns</requirement>
+            <requirement>Integration tests for data flow</requirement>
+            <requirement>Serialization/deserialization tests</requirement>
+            <requirement>Migration tests for database changes</requirement>
+        </requirements>
+    </testing_requirements>
+    
+    <documentation_requirements>
+        <example language="kotlin">
+            <code>
+                /**
+                 * @property travelTime Duration of travel
+                 * @warning This property is used in:
+                 *          - DashboardRepository (display)
+                 *          - RouteGateway (API)
+                 *          - RouteEntity (Database)
+                 **/
+            </code>
+        </example>
+    </documentation_requirements>
+    
+    <anti_patterns>
+        <example language="kotlin">
+            <code>
+                // DON'T: Direct type changes without migration
+                val travelTime: Int  // -> Duration (breaks existing code)
+
+                // DON'T: Implicit type conversions
+                val time: Duration = someInt // Type mismatch
+
+                // DO: Explicit conversions with migration path
+                val travelTime: Duration = someInt.toDuration(DurationUnit.MINUTES)
+            </code>
+        </example>
+    </anti_patterns>
+</property_type_rules>
+
+
+
 """
